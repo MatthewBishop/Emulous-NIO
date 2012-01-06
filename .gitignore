@@ -3,4 +3,6 @@
 /bin
 .classpath
 .project
+.gitignore
 /bemulous
+/.settings

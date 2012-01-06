@@ -524,49 +524,7 @@ public class PlayerAssistant{
         }
         return false;
     }
-	
-	
-	/**
-	* Eating food
-	**/
-	
-	public void eatFood(int heal, int delay, int itemId, int itemSlot) {	
-		c.attackTimer = c.getCombat().getAttackDelay(c.getItems().getItemName(c.playerEquipment[c.playerWeapon]).toLowerCase());
-		if(c.duelRule[6]){
-			c.sendMessage("Food has been disabled in this duel!");
-			return;
-		}
-		if(!c.isDead && System.currentTimeMillis() - c.foodDelay > delay) {
-			if(c.getItems().playerHasItem(itemId, 1, itemSlot)) {
-				if(getLevelForXP(c.playerXP[3]) > c.playerLevel[3]) {
-					c.sendMessage("You eat the "+c.getItems().getItemName(itemId).toLowerCase()+" and it restores some health.");
-				} else {
-					c.sendMessage("You eat the "+c.getItems().getItemName(itemId).toLowerCase()+".");
-				}
-				c.foodDelay = System.currentTimeMillis();
-				if(c.playerLevel[3] + heal >= getLevelForXP(c.playerXP[3])) {
-					c.playerLevel[3] = getLevelForXP(c.playerXP[3]);
-				} else {
-					c.playerLevel[3] += heal;
-				}
-			c.startAnimation(829);
-			c.getItems().deleteItem(itemId, itemSlot, 1);
-			switch(itemId) {
-					case 1891:
-					c.getItems().addItem(1893, 1);
-					break;
-					
-					case 1893:
-					c.getItems().addItem(1895, 1);
-					break;
-			}					
-			
-			refreshSkill(3);
-			requestUpdates();
-			}
-		}	
-	}
-	
+		
 	/**
 	* Burying bones
 	**/

@@ -2,6 +2,7 @@ package server.model.players.packets;
 
 import server.util.*;
 import server.model.players.*;
+import server.model.players.content.Food;
 
 
 /**
@@ -17,7 +18,7 @@ public class ClickItem implements PacketType {
 		if (itemId != c.playerItems[itemSlot] - 1) {
 			return;
 		}
-		
+		Food.handleConsumption(c, itemId, itemSlot);
 		switch(itemId) {
 			case 952: // spade
 			c.startAnimation(830);
@@ -100,75 +101,7 @@ public class ClickItem implements PacketType {
 			break;
 			
 			//End Herblore
-				
-			case 1891: // cake
-			c.getPA().eatFood(4, 1600, itemId, itemSlot);
-			break;
-			
-			case 1893: // 2/3 cake
-			c.getPA().eatFood(4, 1600, itemId, itemSlot);
-			break;
-			
-			case 1895: // 1/4 cake
-			c.getPA().eatFood(4, 1600, itemId, itemSlot);
-			break;
-			
-			case 2309: // bread
-			c.getPA().eatFood(2, 1600, itemId, itemSlot);
-			break;
-			
-			case 1901: // 1/4 choc cake
-			c.getPA().eatFood(5, 1600, itemId, itemSlot);
-			break;
-
-			case 315: // shrimp
-			c.getPA().eatFood(3, 1600, itemId, itemSlot);
-			break;
-				
-			case 355: // mackerel
-			c.getPA().eatFood(6, 1600, itemId, itemSlot);
-			break;
-			
-			case 339: // cod
-			c.getPA().eatFood(7, 1600, itemId, itemSlot);
-			break;	
-						
-			case 333: // trout
-			c.getPA().eatFood(7, 1600, itemId, itemSlot);
-			break;
-						
-			case 351: // pike
-			c.getPA().eatFood(8, 1600, itemId, itemSlot);
-			break;	
-			
-			case 329: // salmon
-			c.getPA().eatFood(9, 1600, itemId, itemSlot);
-			break;
-					
-			case 361: // tuna
-			c.getPA().eatFood(10, 1600, itemId, itemSlot);
-			break;
-			
-			case 379: // lobster
-			c.getPA().eatFood(12, 1600, itemId, itemSlot);
-			break;
-			
-			case 365: // bass
-			c.getPA().eatFood(13, 1600, itemId, itemSlot);
-			break;
-			
-			case 373: // swordfish
-			c.getPA().eatFood(14, 1600, itemId, itemSlot);
-			break;
-			
-			case 385:
-			c.getPA().eatFood(20, 1600, itemId, itemSlot);
-			break;
-			
-			case 391: // manta
-			c.getPA().eatFood(22, 1600, itemId, itemSlot);
-			break;
-			
+							
 			case 526:
 			c.getPA().buryBone(5, 1600, itemId, itemSlot);
 			break;
