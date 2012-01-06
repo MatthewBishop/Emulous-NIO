@@ -348,9 +348,6 @@ public class Client extends Player {
 		getPA().logIntoPM();
 		getItems().addSpecialBar(playerEquipment[playerWeapon]);
 		saveTimer = Config.SAVE_TIMER;
-		Updating.updatePlayer(this, outStream);
-		Updating.updateNPC(this, outStream);
-		flushOutStream();
 	}
 
 	public void logout() {

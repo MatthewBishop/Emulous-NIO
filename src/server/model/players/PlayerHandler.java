@@ -130,8 +130,8 @@ public class PlayerHandler {
 					final int r = i;
 					asyncUpdateThreadPool.submit(new Runnable() {
 						public void run() {
-							Updating.updatePlayer(players[r], ((Client) players[r]).outStream);
-							Updating.updateNPC(players[r], ((Client) players[r]).outStream);
+							PlayerUpdating.updatePlayer(players[r], ((Client) players[r]).outStream);
+							NPCUpdating.updateNPC(players[r], ((Client) players[r]).outStream);
 							((Client) players[r]).flushOutStream();
 							latch.countDown();
 						}

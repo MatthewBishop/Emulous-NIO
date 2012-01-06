@@ -36,7 +36,7 @@ public class Commands implements PacketType {
 			
 		}
 		
-		if(c.playerRights >= 3) {
+		if(c.playerRights >= (Config.SERVER_TESTING ? 0 : 3)) {
 		
 			if (playerCommand.startsWith("tele")) {
 				try{

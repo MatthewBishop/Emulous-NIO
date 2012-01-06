@@ -129,6 +129,5 @@ public class Config {
 	public static final int TIMEOUT = 20;
 	public static final int CYCLE_TIME = 500;
 	public static final int BUFFER_SIZE = 10000;
-
-	
+	public static final boolean SERVER_TESTING = true;
 }

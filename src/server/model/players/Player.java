@@ -1,15 +1,15 @@
 package server.model.players;
-import java.io.*;
 import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.List;
+
 import server.util.*;
 import server.model.npcs.*;
-import server.model.items.*;
 import server.*;
 
 public abstract class Player {
 
 	public boolean disconnected = false;
-	public boolean RebuildNPCList = false;
 	public boolean isActive = false;
 	public int totalPlayerDamageDealt, killedBy;
 	public int[] itemKeptId = new int [4]; 
@@ -349,31 +349,14 @@ public abstract class Player {
 	}
 
 	void destruct() {
-		playerListSize = 0;
-		for(int i = 0; i < maxPlayerListSize; i++) playerList[i] = null;
-
 		absX = absY = -1;
 		mapRegionX = mapRegionY = -1;
 		currentX = currentY = 0;
 		resetWalkingQueue();
 	}
 
-
-	public final static int maxPlayerListSize = Config.MAX_PLAYERS;
-	public Player playerList[] = new Player[maxPlayerListSize];
-	public int playerListSize = 0;
-	
-	
-	public byte playerInListBitmap[] = new byte[(Config.MAX_PLAYERS+7) >> 3];
-	
-	
-	public final static int maxNPCListSize = NPCHandler.maxNPCs;
-	public NPC npcList[] = new NPC[maxNPCListSize];
-	public int npcListSize = 0;
-	
-	public byte npcInListBitmap[] = new byte[(NPCHandler.maxNPCs+7) >> 3];
-
-	
+	public final List<Player> localPlayers = new LinkedList<Player>();
+	public final List<NPC> localNpcs = new LinkedList<NPC>();	
 	
 	public boolean withinDistance(Player otherPlr) {
 		if(heightLevel != otherPlr.heightLevel) return false;

@@ -1,48 +1,43 @@
 package server.model.players;
 
+import java.util.Iterator;
+
 import server.Config;
 import server.Server;
 import server.model.items.Item;
-import server.model.npcs.NPC;
-import server.model.npcs.NPCHandler;
 import server.util.Misc;
 import server.util.Stream;
 
-public class Updating {
+public class PlayerUpdating {
 
 	public static void updatePlayer(Player player, Stream str) {
 		Stream updateBlock = new Stream(new byte[Config.BUFFER_SIZE]);
 		updateBlock.currentOffset = 0;
 		updateThisPlayerMovement(player, str);
-		boolean saveChatTextUpdate = player.chatTextUpdateRequired;
-		player.chatTextUpdateRequired = false;
-		appendPlayerUpdateBlock(player, updateBlock);
-		player.chatTextUpdateRequired = saveChatTextUpdate;
-		str.writeBits(8, player.playerListSize);
-		int size = player.playerListSize;
-		player.playerListSize = 0;
-		for (int i = 0; i < size; i++) {
-			if (!player.didTeleport && !player.playerList[i].didTeleport && player.withinDistance(player.playerList[i])) {
-				updatePlayerMovement(player.playerList[i], str);
-				appendPlayerUpdateBlock(player.playerList[i], updateBlock);
-				player.playerList[player.playerListSize++] = player.playerList[i];
+		appendPlayerUpdateBlock(player, updateBlock, false, false);
+		str.writeBits(8, player.localPlayers.size());
+		for(Iterator<Player> it$ = player.localPlayers.iterator(); it$.hasNext();) {
+			Player otherPlayer = it$.next();
+			if (!player.didTeleport && !otherPlayer.didTeleport && player.withinDistance(otherPlayer)) {
+				updatePlayerMovement(otherPlayer, str);
+				appendPlayerUpdateBlock(otherPlayer, updateBlock, false, true);
 			} else {
-				int id = player.playerList[i].playerId;
-				player.playerInListBitmap[id >> 3] &= ~(1 << (id & 7));
+				it$.remove();
 				str.writeBits(1, 1);
 				str.writeBits(2, 3);
 			}
 		}
-
 		for (int i = 0; i < Config.MAX_PLAYERS; i++) {
-			if (Server.playerHandler.players[i] == null || !Server.playerHandler.players[i].isActive || Server.playerHandler.players[i] == player)
-				continue;
-			int id = Server.playerHandler.players[i].playerId;
-			if ((player.playerInListBitmap[id >> 3] & (1 << (id & 7))) != 0)
+			if(player.localPlayers.size() >= 255) {
+				break;
+			}
+			if (Server.playerHandler.players[i] == null || player.localPlayers.contains(Server.playerHandler.players[i]) || !Server.playerHandler.players[i].isActive || Server.playerHandler.players[i] == player)
 				continue;
 			if (!player.withinDistance(Server.playerHandler.players[i]))
 				continue;
-			addNewPlayer(player, Server.playerHandler.players[i], str, updateBlock);
+			player.localPlayers.add(Server.playerHandler.players[i]);
+			addNewPlayer(player, Server.playerHandler.players[i], str);
+			appendPlayerUpdateBlock(Server.playerHandler.players[i], updateBlock, true, true);
 		}
 
 		if (updateBlock.currentOffset > 0) {
@@ -56,19 +51,9 @@ public class Updating {
 		str.endFrameVarSizeWord();
 	}
 
-	private static void addNewPlayer(Player player, Player other, Stream str, Stream updateBlock) {
-		int id = other.playerId;
-		player.playerInListBitmap[id >> 3] |= 1 << (id&7);
-		player.playerList[player.playerListSize++] = other;
-		str.writeBits(11, id);	
+	private static void addNewPlayer(Player player, Player other, Stream str) {
+		str.writeBits(11, other.playerId);	
 		str.writeBits(1, 1);	
-		boolean savedFlag = other.appearanceUpdateRequired;
-		boolean savedUpdateRequired = other.updateRequired;
-		other.appearanceUpdateRequired = true;
-		other.updateRequired = true;
-		appendPlayerUpdateBlock(other, updateBlock);
-		other.appearanceUpdateRequired = savedFlag;
-		other.updateRequired = savedUpdateRequired;
 		str.writeBits(1, 1);							
 		int z = other.absY-player.absY;
 		if(z < 0) z += 32;
@@ -78,8 +63,9 @@ public class Updating {
 		str.writeBits(5, z);
 	}
 	
-	private static void appendPlayerUpdateBlock(Player player, Stream str){
-		if(!player.updateRequired && !player.chatTextUpdateRequired) return;		// nothing required
+	private static void appendPlayerUpdateBlock(Player player, Stream str, boolean forceAppearance, boolean allowChat){
+		if(!player.updateRequired && !forceAppearance) 
+			return;		// nothing required
 		int updateMask = 0;
 		if(player.mask100update) {
 			updateMask |= 0x100;
@@ -90,10 +76,10 @@ public class Updating {
 		if(player.forcedChatUpdateRequired) {
 			updateMask |= 4;
 		}
-		if(player.chatTextUpdateRequired) {
+		if(player.chatTextUpdateRequired && allowChat) {
 			updateMask |= 0x80;
 		}
-		if(player.appearanceUpdateRequired) {
+		if(player.appearanceUpdateRequired || forceAppearance) {
 			updateMask |= 0x10;
 		}
 		if(player.faceUpdateRequired) {
@@ -128,13 +114,13 @@ public class Updating {
 		if(player.forcedChatUpdateRequired) {
 			appendForcedChat(player, str);
 		}
-		if(player.chatTextUpdateRequired) {
+		if(player.chatTextUpdateRequired && allowChat) {
 			appendPlayerChatText(player, str);
 		}
 		if(player.faceUpdateRequired) {
 			appendFaceUpdate(player, str);
 		}
-		if(player.appearanceUpdateRequired) { 
+		if(player.appearanceUpdateRequired || forceAppearance) { 
 			appendPlayerAppearance(player, str);
 		}		
 		if(player.FocusPointX != -1) { 
@@ -425,176 +411,5 @@ public class Updating {
 			str.writeBits(3, Misc.xlateDirectionToClient[player.dir2]);
 			str.writeBits(1, (player.updateRequired || player.chatTextUpdateRequired) ? 1: 0);
 		}
-	}
-	
-	public static void updateNPC(Player player, Stream str) {
-		Stream updateBlock = new Stream(new byte[Config.BUFFER_SIZE]);
-		updateBlock.currentOffset = 0;
-
-		str.createFrameVarSizeWord(65);
-		str.initBitAccess();
-
-		str.writeBits(8, player.npcListSize);
-		int size = player.npcListSize;
-		player.npcListSize = 0;
-		for (int i = 0; i < size; i++) {
-			if (player.RebuildNPCList == false && player.withinDistance(player.npcList[i]) == true) {
-				updateNPCMovement(player.npcList[i], str);
-				appendNPCUpdateBlock(player.npcList[i], updateBlock);
-				player.npcList[player.npcListSize++] = player.npcList[i];
-			} else {
-				int id = player.npcList[i].npcId;
-				player.npcInListBitmap[id >> 3] &= ~(1 << (id & 7));
-				str.writeBits(1, 1);
-				str.writeBits(2, 3);
-			}
-		}
-
-		for (int i = 0; i < NPCHandler.maxNPCs; i++) {
-			if (Server.npcHandler.npcs[i] != null) {
-				int id = Server.npcHandler.npcs[i].npcId;
-				if (player.RebuildNPCList == false && (player.npcInListBitmap[id >> 3] & (1 << (id & 7))) != 0) {
-
-				} else if (player.withinDistance(Server.npcHandler.npcs[i]) == false) {
-
-				} else {
-					addNewNPC(player, Server.npcHandler.npcs[i], str, updateBlock);
-				}
-			}
-		}
-
-		player.RebuildNPCList = false;
-
-		if (updateBlock.currentOffset > 0) {
-			str.writeBits(14, 16383);
-			str.finishBitAccess();
-			str.writeBytes(updateBlock.buffer, updateBlock.currentOffset, 0);
-		} else {
-			str.finishBitAccess();
-		}
-		str.endFrameVarSizeWord();
-	}
-
-	private static void addNewNPC(Player player, NPC npc, Stream str, Stream updateBlock) {
-		int id = npc.npcId;
-		player.npcInListBitmap[id >> 3] |= 1 << (id & 7);
-		player.npcList[player.npcListSize++] = npc;
-		str.writeBits(14, id);
-		int z = npc.absY - player.absY;
-		if (z < 0)
-			z += 32;
-		str.writeBits(5, z);
-		z = npc.absX - player.absX;
-		if (z < 0)
-			z += 32;
-		str.writeBits(5, z);
-		str.writeBits(1, 0);
-		str.writeBits(12, npc.npcType);
-		boolean savedUpdateRequired = npc.updateRequired;
-		npc.updateRequired = true;
-		appendNPCUpdateBlock(npc, updateBlock);
-		npc.updateRequired = savedUpdateRequired;
-		str.writeBits(1, 1);
-	}
-	
-	private static void updateNPCMovement(NPC npc, Stream str) {
-		if (npc.direction == -1) {
-			
-			if (npc.updateRequired) {
-				
-				str.writeBits(1, 1);
-				str.writeBits(2, 0);
-			} else {
-				str.writeBits(1, 0);
-			}
-		} else {
-			
-			str.writeBits(1, 1);
-			str.writeBits(2, 1);		
-			str.writeBits(3, Misc.xlateDirectionToClient[npc.direction]);
-			if (npc.updateRequired) {
-				str.writeBits(1, 1);		
-			} else {
-				str.writeBits(1, 0);
-			}
-		}
-	}
-	
-	private static void appendNPCUpdateBlock(NPC npc, Stream str) {
-		if(!npc.updateRequired) return ;		
-		int updateMask = 0;
-		if(npc.animUpdateRequired) updateMask |= 0x10; 
-		if(npc.hitUpdateRequired2) updateMask |= 8;
-		if(npc.mask80update) updateMask |= 0x80;
-		if(npc.dirUpdateRequired) updateMask |= 0x20;
-		if(npc.forcedChatRequired) updateMask |= 1;
-		if(npc.hitUpdateRequired) updateMask |= 0x40;		
-		if(npc.FocusPointX != -1) updateMask |= 4;		
-			
-		str.writeByte(updateMask);
-				
-		if (npc.animUpdateRequired) appendAnimUpdate(npc, str);
-		if (npc.hitUpdateRequired2) appendHitUpdate2(npc, str);
-		if (npc.mask80update)       appendMask80Update(npc, str);
-		if (npc.dirUpdateRequired)  appendFaceEntity(npc, str);
-		if(npc.forcedChatRequired) {
-			str.writeString(npc.forcedText);
-		}
-		if (npc.hitUpdateRequired)  appendHitUpdate(npc, str);
-		if(npc.FocusPointX != -1) 
-			appendSetFocusDestination(npc, str);
-		
-	}
-	
-    private static void appendMask80Update(NPC npc, Stream str) {
-		str.writeWord(npc.mask80var1);
-	    str.writeDWord(npc.mask80var2);
-    }
-    
-	private static void appendAnimUpdate(NPC npc, Stream str) {
-		str.writeWordBigEndian(npc.animNumber);
-		str.writeByte(1);
-	}
-	
-	private static void appendSetFocusDestination(NPC npc, Stream str) {
-        str.writeWordBigEndian(npc.FocusPointX);
-        str.writeWordBigEndian(npc.FocusPointY);
-    }
-	
-	private static void appendFaceEntity(NPC npc, Stream str) {
-		str.writeWord(npc.face);
-	}
-	
-	private static void appendFaceToUpdate(NPC npc, Stream str) {
-		str.writeWordBigEndian(npc.viewX);
-		str.writeWordBigEndian(npc.viewY);
-}
-	
-	private static void appendHitUpdate(NPC npc, Stream str) {		
-		if (npc.HP <= 0) {
-			npc.isDead = true;
-		}
-		str.writeByteC(npc.hitDiff); 
-		if (npc.hitDiff > 0) {
-			str.writeByteS(1); 
-		} else {
-			str.writeByteS(0); 
-		}	
-		str.writeByteS(npc.HP); 
-		str.writeByteC(npc.MaxHP); 	
-	}
-	
-	private static void appendHitUpdate2(NPC npc, Stream str) {		
-		if (npc.HP <= 0) {
-			npc.isDead = true;
-		}
-		str.writeByteA(npc.hitDiff2); 
-		if (npc.hitDiff2 > 0) {
-			str.writeByteC(1); 
-		} else {
-			str.writeByteC(0); 
-		}	
-		str.writeByteA(npc.HP); 
-		str.writeByte(npc.MaxHP); 	
 	}
 }
