@@ -34,30 +34,6 @@ public class NPC {
 		randomWalk = true;
 		
 	}
-	
-	
-	public void updateNPCMovement(Stream str) {
-		if (direction == -1) {
-			
-			if (updateRequired) {
-				
-				str.writeBits(1, 1);
-				str.writeBits(2, 0);
-			} else {
-				str.writeBits(1, 0);
-			}
-		} else {
-			
-			str.writeBits(1, 1);
-			str.writeBits(2, 1);		
-			str.writeBits(3, Misc.xlateDirectionToClient[direction]);
-			if (updateRequired) {
-				str.writeBits(1, 1);		
-			} else {
-				str.writeBits(1, 0);
-			}
-		}
-	}
 
 	/**
 	* Text update
@@ -75,13 +51,8 @@ public class NPC {
 	
 	public int mask80var1 = 0;
     public int mask80var2 = 0;
-    protected boolean mask80update = false;
-	
-    public void appendMask80Update(Stream str) {
-		str.writeWord(mask80var1);
-	    str.writeDWord(mask80var2);
-    }
-	
+    public boolean mask80update = false;
+		
 	public void gfx100(int gfx){
 		mask80var1 = gfx;
         mask80var2 = 6553600;
@@ -95,12 +66,7 @@ public class NPC {
         mask80update = true;
 		updateRequired = true;
 	}
-	
-	public void appendAnimUpdate(Stream str) {
-		str.writeWordBigEndian(animNumber);
-		str.writeByte(1);
-	}
-	
+		
 	/**
 	*
 	Face
@@ -110,59 +76,19 @@ public class NPC {
 	public int FocusPointX = -1, FocusPointY = -1;
 	public int face = 0;
 	
-	private void appendSetFocusDestination(Stream str) {
-        str.writeWordBigEndian(FocusPointX);
-        str.writeWordBigEndian(FocusPointY);
-    }
-	
 	public void turnNpc(int i, int j) {
         FocusPointX = 2 * i + 1;
         FocusPointY = 2 * j + 1;
         updateRequired = true;
 
     }
-	
-	public void appendFaceEntity(Stream str) {
-		str.writeWord(face);
-	}
-        	
+	        	
 	public void facePlayer(int player) {
 		face = player + 32768;
 		dirUpdateRequired = true;
 		updateRequired = true;
 	}
-
-	public void appendFaceToUpdate(Stream str) {
-			str.writeWordBigEndian(viewX);
-			str.writeWordBigEndian(viewY);
-	}
 	
-	
-	public void appendNPCUpdateBlock(Stream str) {
-		if(!updateRequired) return ;		
-		int updateMask = 0;
-		if(animUpdateRequired) updateMask |= 0x10; 
-		if(hitUpdateRequired2) updateMask |= 8;
-		if(mask80update) updateMask |= 0x80;
-		if(dirUpdateRequired) updateMask |= 0x20;
-		if(forcedChatRequired) updateMask |= 1;
-		if(hitUpdateRequired) updateMask |= 0x40;		
-		if(FocusPointX != -1) updateMask |= 4;		
-			
-		str.writeByte(updateMask);
-				
-		if (animUpdateRequired) appendAnimUpdate(str);
-		if (hitUpdateRequired2) appendHitUpdate2(str);
-		if (mask80update)       appendMask80Update(str);
-		if (dirUpdateRequired)  appendFaceEntity(str);
-		if(forcedChatRequired) {
-			str.writeString(forcedText);
-		}
-		if (hitUpdateRequired)  appendHitUpdate(str);
-		if(FocusPointX != -1) appendSetFocusDestination(str);
-		
-	}
-
 	public void clearUpdateFlags() {
 		updateRequired = false;
 		forcedChatRequired = false;
@@ -196,39 +122,10 @@ public class NPC {
 			direction = getNextWalkingDirection();
 		}
 	}
-
-
-	public void appendHitUpdate(Stream str) {		
-		if (HP <= 0) {
-			isDead = true;
-		}
-		str.writeByteC(hitDiff); 
-		if (hitDiff > 0) {
-			str.writeByteS(1); 
-		} else {
-			str.writeByteS(0); 
-		}	
-		str.writeByteS(HP); 
-		str.writeByteC(MaxHP); 	
-	}
 	
 	public int hitDiff2 = 0;
 	public boolean hitUpdateRequired2 = false;
-	
-	public void appendHitUpdate2(Stream str) {		
-		if (HP <= 0) {
-			isDead = true;
-		}
-		str.writeByteA(hitDiff2); 
-		if (hitDiff2 > 0) {
-			str.writeByteC(1); 
-		} else {
-			str.writeByteC(0); 
-		}	
-		str.writeByteA(HP); 
-		str.writeByte(MaxHP); 	
-	}
-	
+		
 	public int getX() {
 		return absX;
 	}

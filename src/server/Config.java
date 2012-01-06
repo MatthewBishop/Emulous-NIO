@@ -3,6 +3,7 @@ package server;
 public class Config {
 
 	public static final String SERVER_NAME = "Emulous";
+	public static final int SERVER_PORT = 43594;
 	public static final int ITEM_LIMIT = 20000; // item id limit, different clients have more items like silab which goes past 15000
 	public static final int MAXITEM_AMOUNT = 2000000000;
 	public static final int BANK_SIZE = 200;

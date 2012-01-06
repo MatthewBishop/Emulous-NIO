@@ -200,7 +200,6 @@ public abstract class Player {
 	}
 	
 	public String globalMessage="";
-	public abstract void update();
 	public int playerId = -1;		
 	public String playerName = null;			
 	public String playerPass = null;			
@@ -536,145 +535,9 @@ public abstract class Player {
 
 		}
 	}
-
-	
-	public void updateThisPlayerMovement(Stream str) {
-		if(mapRegionDidChange) {
-			str.createFrame(73);
-			str.writeWordA(mapRegionX+6);	
-			str.writeWord(mapRegionY+6);
-		}
-
-		if(didTeleport) {
-			str.createFrameVarSizeWord(81);
-			str.initBitAccess();
-			str.writeBits(1, 1);
-			str.writeBits(2, 3);			
-			str.writeBits(2, heightLevel);
-			str.writeBits(1, 1);			
-			str.writeBits(1, (updateRequired) ? 1 : 0);
-			str.writeBits(7, currentY);
-			str.writeBits(7, currentX);
-			return ;
-		}
-		
-
-		if(dir1 == -1) {
-			// don't have to update the character position, because we're just standing
-			str.createFrameVarSizeWord(81);
-			str.initBitAccess();
-			isMoving = false;
-			if(updateRequired) {
-				// tell client there's an update block appended at the end
-				str.writeBits(1, 1);
-				str.writeBits(2, 0);
-			} else {
-				str.writeBits(1, 0);
-			}
-			if (DirectionCount < 50) {
-				DirectionCount++;
-			}
-		} else {
-			DirectionCount = 0;
-			str.createFrameVarSizeWord(81);
-			str.initBitAccess();
-			str.writeBits(1, 1);
-
-			if(dir2 == -1) {
-				isMoving = true;
-				str.writeBits(2, 1);		
-				str.writeBits(3, Misc.xlateDirectionToClient[dir1]);
-				if(updateRequired) str.writeBits(1, 1);		
-				else str.writeBits(1, 0);
-			}
-			else {
-				isMoving = true;
-				str.writeBits(2, 2);		
-				str.writeBits(3, Misc.xlateDirectionToClient[dir1]);
-				str.writeBits(3, Misc.xlateDirectionToClient[dir2]);
-				if(updateRequired) str.writeBits(1, 1);		
-				else str.writeBits(1, 0);
-			}
-		}
-
-	}
-
-	
-	public void updatePlayerMovement(Stream str) {
-		if(dir1 == -1) {
-			if(updateRequired || chatTextUpdateRequired) {
-				
-				str.writeBits(1, 1);
-				str.writeBits(2, 0);
-			}
-			else str.writeBits(1, 0);
-		}
-		else if(dir2 == -1) {
-			
-			str.writeBits(1, 1);
-			str.writeBits(2, 1);
-			str.writeBits(3, Misc.xlateDirectionToClient[dir1]);
-			str.writeBits(1, (updateRequired || chatTextUpdateRequired) ? 1: 0);
-		}
-		else {
-			
-			str.writeBits(1, 1);
-			str.writeBits(2, 2);
-			str.writeBits(3, Misc.xlateDirectionToClient[dir1]);
-			str.writeBits(3, Misc.xlateDirectionToClient[dir2]);
-			str.writeBits(1, (updateRequired || chatTextUpdateRequired) ? 1: 0);
-		}
-	}
-
 	
 	public byte cachedPropertiesBitmap[] = new byte[(Config.MAX_PLAYERS+7) >> 3];
-
-		public void addNewNPC(NPC npc, Stream str, Stream updateBlock) {
-		int id = npc.npcId;
-		npcInListBitmap[id >> 3] |= 1 << (id&7);	
-		npcList[npcListSize++] = npc;
-
-		str.writeBits(14, id);	
-		
-		int z = npc.absY-absY;
-		if(z < 0) z += 32;
-		str.writeBits(5, z);	
-		z = npc.absX-absX;
-		if(z < 0) z += 32;
-		str.writeBits(5, z);	
-
-		str.writeBits(1, 0); 
-		str.writeBits(12, npc.npcType);
-		
-		boolean savedUpdateRequired = npc.updateRequired;
-		npc.updateRequired = true;
-		npc.appendNPCUpdateBlock(updateBlock);
-		npc.updateRequired = savedUpdateRequired;	
-		str.writeBits(1, 1); 
-	}
 	
-	public void addNewPlayer(Player plr, Stream str, Stream updateBlock) {
-		int id = plr.playerId;
-		playerInListBitmap[id >> 3] |= 1 << (id&7);
-		playerList[playerListSize++] = plr;
-		str.writeBits(11, id);	
-		str.writeBits(1, 1);	
-		boolean savedFlag = plr.appearanceUpdateRequired;
-		boolean savedUpdateRequired = plr.updateRequired;
-		plr.appearanceUpdateRequired = true;
-		plr.updateRequired = true;
-		plr.appendPlayerUpdateBlock(updateBlock);
-		plr.appearanceUpdateRequired = savedFlag;
-		plr.updateRequired = savedUpdateRequired;
-		str.writeBits(1, 1);							
-		int z = plr.absY-absY;
-		if(z < 0) z += 32;
-		str.writeBits(5, z);	
-		z = plr.absX-absX;
-		if(z < 0) z += 32;
-		str.writeBits(5, z);
-	}
-
 	public int DirectionCount = 0;
 	public boolean appearanceUpdateRequired = true;	
 	public int hitDiff2, hitDiff = 0;
@@ -682,131 +545,7 @@ public abstract class Player {
 	public boolean isDead = false;
 														
 
-	protected static Stream playerProps;
-	static {
-		playerProps = new Stream(new byte[100]);
-	}
-	protected void appendPlayerAppearance(Stream str) {
-		playerProps.currentOffset = 0;
 
-		playerProps.writeByte(playerAppearance[0]);			
-			
-		playerProps.writeByte(headIcon);
-		//playerProps.writeByte(headIconPk);
-		//playerProps.writeByte(headIconHints);	
-		
-		if (playerEquipment[playerHat] > 1) {
-			playerProps.writeWord(0x200 + playerEquipment[playerHat]);
-		} else {
-			playerProps.writeByte(0);
-		}
-
-		if (playerEquipment[playerCape] > 1) {
-			playerProps.writeWord(0x200 + playerEquipment[playerCape]);
-		} else {
-			playerProps.writeByte(0);
-		}
-
-		if (playerEquipment[playerAmulet] > 1) {
-			playerProps.writeWord(0x200 + playerEquipment[playerAmulet]);
-		} else {
-			playerProps.writeByte(0);
-		}
-
-		if (playerEquipment[playerWeapon] > 1) {
-			playerProps.writeWord(0x200 + playerEquipment[playerWeapon]);
-		} else {
-			playerProps.writeByte(0);
-		}
-
-		if (playerEquipment[playerChest] > 1) {
-			playerProps.writeWord(0x200 + playerEquipment[playerChest]);
-		} else {
-			playerProps.writeWord(0x100+playerAppearance[2]);
-		}
-		
-		if (playerEquipment[playerShield] > 1) {
-			playerProps.writeWord(0x200 + playerEquipment[playerShield]);
-		} else {
-			playerProps.writeByte(0);
-		}
-		
-		if (!Item.isPlate(playerEquipment[playerChest])) {
-			playerProps.writeWord(0x100+playerAppearance[3]);
-		} else {
-			playerProps.writeByte(0);
-		}
-		
-		if (playerEquipment[playerLegs] > 1) {
-			playerProps.writeWord(0x200 + playerEquipment[playerLegs]);
-		} else {
-			playerProps.writeWord(0x100+playerAppearance[5]);
-		}
-		
-		if (!Item.isFullHelm(playerEquipment[playerHat]) && !Item.isFullMask(playerEquipment[playerHat])) {
-			playerProps.writeWord(0x100 + playerAppearance[1]);		
-		} else {
-			playerProps.writeByte(0);
-		}
-
-		if (playerEquipment[playerHands] > 1) {
-			playerProps.writeWord(0x200 + playerEquipment[playerHands]);
-		} else {
-			playerProps.writeWord(0x100+playerAppearance[4]);
-		}
-		
-		if (playerEquipment[playerFeet] > 1) {
-			playerProps.writeWord(0x200 + playerEquipment[playerFeet]);
-		} else {
-			 playerProps.writeWord(0x100+playerAppearance[6]);
-		}
-			 
-		if (!Item.isFullHelm(playerEquipment[playerHat]) && !Item.isFullMask(playerEquipment[playerHat]) &&(playerAppearance[0] != 1)) {
-			playerProps.writeWord(0x100 + playerAppearance[7]);
-		} else {
-			playerProps.writeByte(0);
-		}
-		
-		playerProps.writeByte(playerAppearance[8]);	
-		playerProps.writeByte(playerAppearance[9]);	
-		playerProps.writeByte(playerAppearance[10]);	
-		playerProps.writeByte(playerAppearance[11]);	
-		playerProps.writeByte(playerAppearance[12]);	
-		playerProps.writeWord(playerStandIndex);		// standAnimIndex
-		playerProps.writeWord(playerTurnIndex);		// standTurnAnimIndex
-		playerProps.writeWord(playerWalkIndex);		// walkAnimIndex
-		playerProps.writeWord(playerTurn180Index);		// turn180AnimIndex
-		playerProps.writeWord(playerTurn90CWIndex);		// turn90CWAnimIndex
-		playerProps.writeWord(playerTurn90CCWIndex);		// turn90CCWAnimIndex
-		playerProps.writeWord(playerRunIndex);		// runAnimIndex	
-
-		playerProps.writeQWord(Misc.playerNameToInt64(playerName));
-
-		int mag = (int) ((getLevelForXP(playerXP[6])) * 1.5);
-		int ran = (int) ((getLevelForXP(playerXP[4])) * 1.5);
-		int attstr = (int) ((double) (getLevelForXP(playerXP[0])) + (double) (getLevelForXP(playerXP[2])));
-
-		combatLevel = 0;
-		if (ran > attstr) {
-			combatLevel = (int) (((getLevelForXP(playerXP[1])) * 0.25)
-					+ ((getLevelForXP(playerXP[3])) * 0.25)
-					+ ((getLevelForXP(playerXP[5])) * 0.125) + ((getLevelForXP(playerXP[4])) * 0.4875));
-		} else if (mag > attstr) {
-			combatLevel = (int) (((getLevelForXP(playerXP[1])) * 0.25)
-					+ ((getLevelForXP(playerXP[3])) * 0.25)
-					+ ((getLevelForXP(playerXP[5])) * 0.125) + ((getLevelForXP(playerXP[6])) * 0.4875));
-		} else {
-			combatLevel = (int) (((getLevelForXP(playerXP[1])) * 0.25)
-					+ ((getLevelForXP(playerXP[3])) * 0.25)
-					+ ((getLevelForXP(playerXP[5])) * 0.125)
-					+ ((getLevelForXP(playerXP[0])) * 0.325) + ((getLevelForXP(playerXP[2])) * 0.325));
-		}
-		playerProps.writeByte(combatLevel);		// combat level		
-		playerProps.writeWord(0);		
-		str.writeByteC(playerProps.currentOffset);		
-		str.writeBytes(playerProps.buffer, playerProps.currentOffset, 0);
- 	}
-	
 	
 	public int getLevelForXP(int exp) {
 		int points = 0;
@@ -824,14 +563,7 @@ public abstract class Player {
 	public boolean chatTextUpdateRequired = false;
 	public byte chatText[] = new byte[4096], chatTextSize = 0;
 	public int chatTextEffects = 0, chatTextColor = 0;
-	
-	protected void appendPlayerChatText(Stream str) {
-		str.writeWordBigEndian(((chatTextColor&0xFF) << 8) + (chatTextEffects&0xFF));
-		str.writeByte(playerRights);
-		str.writeByteC(chatTextSize);		
-		str.writeBytes_reverse(chatText, chatTextSize, 0);
-	}
-	
+		
 	public void forcedChat(String text) {
 		forcedText = text;
 		forcedChatUpdateRequired = true;
@@ -839,9 +571,6 @@ public abstract class Player {
 		appearanceUpdateRequired = true;
 	}
 	public String forcedText = "null";
-	public void appendForcedChat(Stream str) {
-		str.writeString(forcedText);
-    }
 
 	/**
 	*Graphics
@@ -850,12 +579,7 @@ public abstract class Player {
 	public int mask100var1 = 0;
     public int mask100var2 = 0;
 	protected boolean mask100update = false;
-	
-	public void appendMask100Update(Stream str) {
-		str.writeWordBigEndian(mask100var1);
-        str.writeDWord(mask100var2);
-    }
-		
+			
 	public void gfx100(int gfx) {
 		mask100var1 = gfx;
 		mask100var2 = 6553600;
@@ -883,11 +607,6 @@ public abstract class Player {
 		animationWaitCycles = time;
 		updateRequired = true;
 	}
-
-	public void appendAnimationRequest(Stream str) {
-		str.writeWordBigEndian((animationRequest==-1) ? 65535 : animationRequest);
-		str.writeByteC(animationWaitCycles);
-	}
 	
 	/** 
 	*Face Update
@@ -902,136 +621,17 @@ public abstract class Player {
 		faceUpdateRequired = true;
 		updateRequired = true;
     }
-
-	public void appendFaceUpdate(Stream str) {
-		str.writeWordBigEndian(face);
-	}
 	
 	public void turnPlayerTo(int pointX, int pointY){
       FocusPointX = 2*pointX+1;
       FocusPointY = 2*pointY+1;
 	  updateRequired = true;
     }
-	
-	private void appendSetFocusDestination(Stream str) {
-        str.writeWordBigEndianA(FocusPointX);
-        str.writeWordBigEndian(FocusPointY);
-    }
-	
+		
 	/** 
 	*Hit Update
 	**/
-	
-	protected void appendHitUpdate(Stream str) {
-		try {
-			str.writeByte(hitDiff); // What the perseon got 'hit' for
-			if (hitDiff > 0) {
-				str.writeByteA(1); // 0: red hitting - 1: blue hitting
-			} else {
-				str.writeByteA(0); // 0: red hitting - 1: blue hitting
-			}
-			if (playerLevel[3] <= 0) {
-				playerLevel[3] = 0;
-				isDead = true;	
-			}
-			str.writeByteC(playerLevel[3]); // Their current hp, for HP bar
-			str.writeByte(getLevelForXP(playerXP[3])); // Their max hp, for HP bar
-		} catch(Exception e) {
-			e.printStackTrace();
-		}
-	}
-	
-	
-	protected void appendHitUpdate2(Stream str) {
-		try {
-			str.writeByte(hitDiff2); // What the perseon got 'hit' for
-			if (hitDiff2 > 0) {
-				str.writeByteS(1); // 0: red hitting - 1: blue hitting
-			} else {
-				str.writeByteS(0); // 0: red hitting - 1: blue hitting
-			}
-			if (playerLevel[3] <= 0) {
-				playerLevel[3] = 0;
-				isDead = true;	
-			}
-			str.writeByte(playerLevel[3]); // Their current hp, for HP bar
-			str.writeByteC(getLevelForXP(playerXP[3])); // Their max hp, for HP bar
-		} catch(Exception e) {
-			e.printStackTrace();
-		}
-	}
-	
-	
-	public void appendPlayerUpdateBlock(Stream str){
-		if(!updateRequired && !chatTextUpdateRequired) return;		// nothing required
-		int updateMask = 0;
-		if(mask100update) {
-			updateMask |= 0x100;
-		}
-		if(animationRequest != -1) {
-			updateMask |= 8;
-		}
-		if(forcedChatUpdateRequired) {
-			updateMask |= 4;
-		}
-		if(chatTextUpdateRequired) {
-			updateMask |= 0x80;
-		}
-		if(appearanceUpdateRequired) {
-			updateMask |= 0x10;
-		}
-		if(faceUpdateRequired) {
-			updateMask |= 1;
-		}
-		if(FocusPointX != -1) { 
-			updateMask |= 2;
-		}
-		if (hitUpdateRequired) {
-			updateMask |= 0x20;
-		}
-
-		if(hitUpdateRequired2) {
-			updateMask |= 0x200;
-		}
 		
-		if(updateMask >= 0x100) {
-			updateMask |= 0x40;	
-			str.writeByte(updateMask & 0xFF);
-			str.writeByte(updateMask >> 8);
-		} else {	
-			str.writeByte(updateMask);
-		}
-
-		// now writing the various update blocks itself - note that their order crucial
-		if(mask100update) {   
-			appendMask100Update(str);
-		}
-		if(animationRequest != -1) {
-			appendAnimationRequest(str);	
-		}
-		if(forcedChatUpdateRequired) {
-			appendForcedChat(str);
-		}
-		if(chatTextUpdateRequired) {
-			appendPlayerChatText(str);
-		}
-		if(faceUpdateRequired) {
-			appendFaceUpdate(str);
-		}
-		if(appearanceUpdateRequired) { 
-			appendPlayerAppearance(str);
-		}		
-		if(FocusPointX != -1) { 
-			appendSetFocusDestination(str);
-		}
-		if(hitUpdateRequired) {
-			appendHitUpdate(str); 
-		}
-		if(hitUpdateRequired2) {
-			appendHitUpdate2(str); 
-		}
-	}
-
 	public void clearUpdateFlags(){
 		updateRequired = false;
 		chatTextUpdateRequired = false;
