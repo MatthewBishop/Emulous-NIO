@@ -3,6 +3,7 @@ package server.model.players.packets;
 import server.util.*;
 import server.model.players.*;
 import server.model.players.content.Food;
+import server.model.players.content.Herblore;
 
 
 /**
@@ -19,6 +20,8 @@ public class ClickItem implements PacketType {
 			return;
 		}
 		Food.handleConsumption(c, itemId, itemSlot);
+		Herblore.idHerb(c, itemId, itemSlot);
+
 		switch(itemId) {
 			case 952: // spade
 			c.startAnimation(830);
@@ -41,67 +44,7 @@ public class ClickItem implements PacketType {
 				c.teleTimer = 3;
 				c.newLocation = 6;
 	        } 			
-			break;
-			
-			// Start Herblore
-			case 199: // Guam
-			server.model.players.skills.Herblore.idHerb(c, itemId, itemSlot, 3, 249);
-			break;
-			
-			case 201: //Marrentill
-			server.model.players.skills.Herblore.idHerb(c, itemId, itemSlot, 5, 251);
-			break;
-			
-			case 203: // Tarromin
-			server.model.players.skills.Herblore.idHerb(c, itemId, itemSlot, 11, 253);
-			break;
-			
-			case 205: // Harralander 
-			server.model.players.skills.Herblore.idHerb(c, itemId, itemSlot, 20, 255);
-			break;
-			
-			case 207: // Ranarr Weed 
-			server.model.players.skills.Herblore.idHerb(c, itemId, itemSlot, 25, 257);
-			break;
-			
-			case 3049: // Toadflax 
-			server.model.players.skills.Herblore.idHerb(c, itemId, itemSlot, 30, 2998);
-			break;
-			
-			case 209: // Irit Leaf 
-			server.model.players.skills.Herblore.idHerb(c, itemId, itemSlot, 40, 259);
-			break;
-			
-			case 211: // Avantoe
-			server.model.players.skills.Herblore.idHerb(c, itemId, itemSlot, 48, 261);
-			break;
-			
-			case 213: // Kwuarm 
-			server.model.players.skills.Herblore.idHerb(c, itemId, itemSlot, 54, 263);
-			break;
-			
-			case 2485: // Snapdragon 
-			server.model.players.skills.Herblore.idHerb(c, itemId, itemSlot, 59, 3000);
-			break;
-			
-			case 215: // Cadantine
-			server.model.players.skills.Herblore.idHerb(c, itemId, itemSlot, 65, 265);
-			break;
-			
-			case 1531: // Lantadyme
-			server.model.players.skills.Herblore.idHerb(c, itemId, itemSlot, 67, 2481);
-			break;
-			
-			case 217: // Dwarf Weed 
-			server.model.players.skills.Herblore.idHerb(c, itemId, itemSlot, 70, 267);
-			break;
-			
-			case 1525: // Torstol
-			server.model.players.skills.Herblore.idHerb(c, itemId, itemSlot, 75, 269);
-			break;
-			
-			//End Herblore
-							
+			break;							
 			case 526:
 			c.getPA().buryBone(5, 1600, itemId, itemSlot);
 			break;
